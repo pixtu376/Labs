@@ -1,16 +1,30 @@
-class Book:
+from abc import ABC, abstractmethod
+
+class Entity(ABC):
+    def __init__(self, name):
+        self.name = name
+
+    def __str__(self):
+        return f"{self.name}"
+
+    @abstractmethod
+    def update(self, name):
+        pass
+
+
+class Book(Entity):
     def __init__(self, title, author, genre, price):
-        self.title = title
+        super().__init__(title)
         self.author = author
         self.genre = genre
         self.price = price
 
     def __str__(self):
-        return f"Название: {self.title}, Автор: {self.author.name}, Жанр: {self.genre.name}, Цена: {self.price}Р"
+        return f"Название: {self.name}, Автор: {self.author.name}, Жанр: {self.genre.name}, Цена: {self.price}Р"
 
     def update(self, title=None, author=None, genre=None, price=None):
         if title:
-            self.title = title
+            self.name = title
         if author:
             self.author = author
         if genre:
@@ -19,50 +33,38 @@ class Book:
             self.price = price
 
 
-class Genre:
+class Genre(Entity):
     def __init__(self, name):
-        self.name = name
-
-    def __str__(self):
-        return f"Жанр: {self.name}"
+        super().__init__(name)
 
 
-class Author:
+class Author(Entity):
     def __init__(self, name):
-        self.name = name
-
-    def __str__(self):
-        return f"Автор: {self.name}"
+        super().__init__(name)
 
     def update(self, name):
         self.name = name
 
 
-class Customer:
+class Customer(Entity):
     def __init__(self, name):
-        self.name = name
+        super().__init__(name)
         self.books = []
-
-    def __str__(self):
-        return f"Имя покупателя: {self.name}"
 
     def buy_book(self, book):
         self.books.append(book)
 
 
-class Store:
+class Store(Entity):
     def __init__(self, name):
-        self.name = name
+        super().__init__(name)
         self.library = []
 
     def add_book(self, book):
         self.library.append(book)
 
     def remove_book(self, book_title):
-        self.library = [b for b in self.library if b.title != book_title]
-
-    def __str__(self):
-        return f"Название магазина: {self.name}"
+        self.library = [b for b in self.library if b.name != book_title]
 
 
 def display_menu():
@@ -105,7 +107,7 @@ def edit_book(books, authors, genres):
     book_title = input("Введите название книги для изменения: ")
     book = None
     for b in books:
-        if b.title == book_title:
+        if b.name == book_title:
             book = b
             break
     if not book:
@@ -219,7 +221,7 @@ def buy_book(customers, stores):
 
     print("Доступные книги в магазине:")
     for i, book in enumerate(store.library):
-        print(f"{i+1}. {book.title} - {book.author.name} - {book.genre.name} - {book.price}Р")
+        print(f"{i+1}. {book.name} - {book.author.name} - {book.genre.name} - {book.price}Р")
 
     book_choice = input("Введите номер книги для покупки: ")
     try:
@@ -233,8 +235,8 @@ def buy_book(customers, stores):
 
     book = store.library[book_choice - 1]
     customer.buy_book(book)
-    store.remove_book(book.title)
-    print(f"Книга '{book.title}' куплена покупателем '{customer.name}'.")
+    store.remove_book(book.name)
+    print(f"Книга '{book.name}' куплена покупателем '{customer.name}'.")
 
 
 def main():
@@ -248,7 +250,7 @@ def main():
         display_menu()
         choice = input("Выберите действие: ")
 
-        if choice == "1":  # Книги
+        if choice == "1":  
             while True:
                 print(f"Меню управления книгами")
                 print(f"1. Показать все книги")
@@ -300,7 +302,7 @@ def main():
                 else:
                     print("Неверный ввод")
 
-        elif choice == "2":  # Жанры
+        elif choice == "2":  
             while True:
                 print("Список жанров:")
                 for g in genres:
@@ -312,7 +314,7 @@ def main():
                 else:
                     print("Неверный ввод")
 
-        elif choice == "3":  # Авторы
+        elif choice == "3":  
             while True:
                 print(f"Меню управления авторами")
                 print(f"1. Показать всех авторов")
@@ -335,7 +337,7 @@ def main():
                 else:
                     print("Неверный ввод")
 
-        elif choice == "4":  # Покупатели
+        elif choice == "4":  
             while True:
                 print("Список покупателей:")
                 for c in customers:
@@ -353,7 +355,7 @@ def main():
                 else:
                     print("Неверный ввод")
 
-        elif choice == "5":  # Магазины
+        elif choice == "5":  
             while True:
                 print("Список магазинов:")
                 for s in stores:
@@ -365,7 +367,7 @@ def main():
                 else:
                     print("Неверный ввод")
 
-        elif choice == "0":  # Выход
+        elif choice == "0":  
             break
         else:
             print("Неверный ввод. Попробуйте еще раз.")
