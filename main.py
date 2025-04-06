@@ -71,7 +71,7 @@ def main():
                     price = float(input("Введите цену книги: "))
                     
                     new_book = Book(book_title, Author(author_name), Genre(genre_name), price)
-                    add_book(conn, new_book)
+                    add_book(conn, book_title, author_name, genre_name, price)
                     books.append(new_book)
                     print(f"Книга '{book_title}' добавлена в базу данных.")
                 elif book_choice == "3":
@@ -173,7 +173,7 @@ def main():
                     store_name = input("Введите название магазина для просмотра библиотеки: ")
                     if store_name in stores:
                         print(f"Библиотека магазина '{store_name}':")
-                        for book in stores[store_name].books:
+                        for book in stores[store_name].library:
                             print(book)
                     else:
                         print("Магазин не найден.")

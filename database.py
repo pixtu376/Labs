@@ -23,21 +23,8 @@ def create_tables(conn):
                 )""")
     conn.commit()
 
-def add_book(conn, authors, genres):
+def kadd_boo(conn, title, author, genre, price):
     try:
-        title = input("Введите название книги: ")
-        author_name = input("Введите имя автора: ")
-        author = authors.get(author_name)
-        if not author:
-            print("Автор с таким именем не найден.")
-            return
-        genre_name = input("Введите название жанра: ")
-        genre = genres.get(genre_name)
-        if not genre:
-            print("Жанр с таким именем не найден.")
-            return
-        price = float(input("Введите цену книги: "))
-        book = Book(title, author, genre, price)
         c = conn.cursor()
         c.execute("INSERT INTO books VALUES (?, ?, ?, ?)",
                   (book.name, book.author.name, book.genre.name, book.price))
