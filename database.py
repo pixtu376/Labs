@@ -23,7 +23,7 @@ def create_tables(conn):
                 )""")
     conn.commit()
 
-def kadd_boo(conn, title, author, genre, price):
+def add_book(conn, title, author, genre, price):
     try:
         c = conn.cursor()
         c.execute("INSERT INTO books VALUES (?, ?, ?, ?)",
