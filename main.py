@@ -1,231 +1,680 @@
+import sys
+import os
 import sqlite3
-from database import create_tables, add_book, edit_book, delete_book, add_author, edit_author, delete_author, buy_book
-from classes import Book, Author, Genre, Customer, Store
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+                            QLabel, QPushButton, QLineEdit, QComboBox, QListWidget,
+                            QTabWidget, QFormLayout, QMessageBox, QStackedWidget, QDialog,
+                            QDialogButtonBox, QGridLayout, QFrame, QGroupBox, QSizePolicy)
+from PyQt5.QtGui import QDoubleValidator, QFont, QColor, QPalette
+from PyQt5.QtCore import Qt, QLibraryInfo, QSize
+from database import create_tables, add_book, add_author, add_genre, add_store, add_customer
+from classes import Book, Author, Genre, Store, Customer
 from logger import logger
 
-def load_books(conn):
-    c = conn.cursor()
-    c.execute("SELECT title, author, genre, price FROM books")
-    rows = c.fetchall()
-    books = []
-    for row in rows:
-        title, author_name, genre_name, price = row
-        author = Author(author_name)
-        genre = Genre(genre_name)
-        book = Book(title, author, genre, price)
-        books.append(book)
-    return books
+os.environ['QT_QPA_PLATFORM_PLUGIN_PATH'] = QLibraryInfo.location(QLibraryInfo.PluginsPath) + '\\platforms'
 
-def main():
-    global conn
-    logger.log_info("Запуск программы")
-    
-    try:
-        conn = sqlite3.connect('books.db')
-        create_tables(conn)
-        logger.log_info("База данных подключена и таблицы созданы")
+class BookStoreApp(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        logger.log_info("Инициализация приложения")
+        
+        try:
+            # Подключение к базе данных
+            self.conn = sqlite3.connect('books.db')
+            create_tables(self.conn)
+            logger.log_info("База данных подключена")
+            
+            # Загрузка данных
+            self.books = []
+            self.authors = []
+            self.genres = []
+            self.stores = []
+            self.customers = []
+            self.load_initial_data()
+            
+            # Настройка интерфейса
+            self.setup_ui()
+            logger.log_info("Интерфейс настроен")
+            
+        except Exception as e:
+            logger.log_error(f"Ошибка инициализации: {str(e)}")
+            raise
 
-        books = load_books(conn)
-        logger.log_info(f"Загружено книг: {len(books)}")
+    def load_initial_data(self):
+        """Загрузка начальных данных из базы"""
+        try:
+            # Загрузка книг
+            cur = self.conn.cursor()
+            cur.execute("SELECT title, author, genre, price FROM books")
+            self.books = [Book(title, Author(author), Genre(genre), price) 
+                         for title, author, genre, price in cur.fetchall()]
+            
+            # Загрузка авторов
+            cur.execute("SELECT name FROM authors")
+            self.authors = [Author(name[0]) for name in cur.fetchall()]
+            
+            # Загрузка жанров
+            cur.execute("SELECT name FROM genres")
+            self.genres = [Genre(name[0]) for name in cur.fetchall()]
+            
+            # Загрузка магазинов
+            cur.execute("SELECT name FROM stores")
+            self.stores = [Store(name[0]) for name in cur.fetchall()]
+            
+            # Загрузка покупателей
+            cur.execute("SELECT name FROM customers")
+            self.customers = [Customer(name[0]) for name in cur.fetchall()]
+            
+            logger.log_info("Данные успешно загружены")
+        except Exception as e:
+            logger.log_error(f"Ошибка загрузки данных: {str(e)}")
+            raise
 
-        authors = {
-            "Стивен": Author("Стивен"),
-            "Дж.К.": Author("Дж.К."),
-            "Агата": Author("Агата")
-        }
-        genres = {
-            "Детская литература": Genre("Детская литература"),
-            "Мистика": Genre("Мистика"),
-            "Научная литература": Genre("Научная литература")
-        }
-        stores = {
-            "Магазин на Ленина": Store("Магазин на Ленина"),
-            "Магазин на Пролетарской": Store("Магазин на Пролетарской"),
-            "Книжный мир": Store("Книжный мир")
-        }
-        customers = {
-            "Байден": Customer("Байден"),
-            "Путин": Customer("Путин"),
-            "Трамп": Customer("Трамп")
-        }
+    def setup_ui(self):
+        """Настройка пользовательского интерфейса по макетам"""
+        self.setWindowTitle("Управление книжным магазином")
+        self.setGeometry(100, 100, 1200, 800)
+        
+        # Зелёная цветовая схема
+        self.setStyleSheet("""
+            QMainWindow {
+                background-color: #f0f9f0;
+            }
+            QGroupBox {
+                background-color: white;
+                border: 2px solid #4CAF50;
+                border-radius: 5px;
+                margin-top: 10px;
+                padding-top: 15px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 3px;
+                color: #333;
+                font-weight: bold;
+            }
+            QPushButton {
+                background-color: #4CAF50;
+                border: none;
+                color: white;
+                padding: 8px 16px;
+                text-align: center;
+                text-decoration: none;
+                font-size: 14px;
+                margin: 4px 2px;
+                border-radius: 4px;
+            }
+            QPushButton:hover {
+                background-color: #45a049;
+            }
+            QLabel {
+                font-size: 14px;
+                margin: 5px;
+                color: #333;
+            }
+            QListWidget {
+                background-color: white;
+                border: 1px solid #a0c0a0;
+                border-radius: 4px;
+            }
+            QLineEdit, QComboBox {
+                padding: 6px;
+                font-size: 14px;
+                border: 1px solid #a0c0a0;
+                border-radius: 4px;
+                background-color: white;
+            }
+        """)
+        
+        # Центральный виджет
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        main_layout = QVBoxLayout(central_widget)
+        main_layout.setContentsMargins(10, 10, 10, 10)
+        main_layout.setSpacing(15)
+        
+        # Верхняя панель с кнопками навигации
+        self.top_nav = QHBoxLayout()
+        self.top_nav.setSpacing(10)
+        
+        self.books_btn = QPushButton("Книги")
+        self.authors_btn = QPushButton("Авторы")
+        self.genres_btn = QPushButton("Жанры")
+        self.stores_btn = QPushButton("Магазины")
+        self.customers_btn = QPushButton("Покупатели")
+        
+        self.books_btn.clicked.connect(lambda: self.show_category("books"))
+        self.authors_btn.clicked.connect(lambda: self.show_category("authors"))
+        self.genres_btn.clicked.connect(lambda: self.show_category("genres"))
+        self.stores_btn.clicked.connect(lambda: self.show_category("stores"))
+        self.customers_btn.clicked.connect(lambda: self.show_category("customers"))
+        
+        # Устанавливаем фиксированный размер для кнопок
+        for btn in [self.books_btn, self.authors_btn, self.genres_btn, 
+                   self.stores_btn, self.customers_btn]:
+            btn.setFixedSize(120, 40)
+        
+        self.top_nav.addWidget(self.books_btn)
+        self.top_nav.addWidget(self.authors_btn)
+        self.top_nav.addWidget(self.genres_btn)
+        self.top_nav.addWidget(self.stores_btn)
+        self.top_nav.addWidget(self.customers_btn)
+        self.top_nav.addStretch()
+        
+        main_layout.addLayout(self.top_nav)
+        
+        # Центральная область с информационными блоками
+        self.central_area = QVBoxLayout()
+        
+        # Верхняя строка с 5 блоками
+        self.top_row = QHBoxLayout()
+        self.top_row.setSpacing(15)
+        
+        # Создаем 5 информационных блоков одинакового размера
+        self.info_blocks = []
+        for i in range(5):
+            block = QGroupBox()
+            block.setFixedSize(220, 220)  # Фиксированный размер блоков
+            block_layout = QVBoxLayout(block)
+            
+            title = QLabel()
+            title.setStyleSheet("font-weight: bold; font-size: 16px;")
+            block_layout.addWidget(title)
+            
+            content = QLabel()
+            content.setWordWrap(True)
+            block_layout.addWidget(content)
+            
+            self.info_blocks.append((block, title, content))
+            self.top_row.addWidget(block)
+        
+        self.central_area.addLayout(self.top_row)
+        
+        # Нижний информационный блок с кнопками
+        self.bottom_block = QGroupBox()
+        bottom_layout = QVBoxLayout(self.bottom_block)
+        
+        self.bottom_content = QLabel()
+        self.bottom_content.setWordWrap(True)
+        bottom_layout.addWidget(self.bottom_content)
+        
+        # Кнопки действий
+        self.action_buttons = QHBoxLayout()
+        
+        self.add_btn = QPushButton()
+        self.add_btn.setFixedSize(150, 40)
+        
+        self.add_to_store_btn = QPushButton("Добавить книгу в магазин")
+        self.add_to_store_btn.setFixedSize(180, 40)
+        self.add_to_store_btn.clicked.connect(self.show_add_to_store_dialog)
+        self.add_to_store_btn.hide()
+        
+        self.show_store_btn = QPushButton("Показать библиотеку")
+        self.show_store_btn.setFixedSize(150, 40)
+        self.show_store_btn.clicked.connect(self.show_store_books_dialog)
+        self.show_store_btn.hide()
+        
+        self.action_buttons.addWidget(self.add_btn)
+        self.action_buttons.addWidget(self.add_to_store_btn)
+        self.action_buttons.addWidget(self.show_store_btn)
+        self.action_buttons.addStretch()
+        
+        bottom_layout.addLayout(self.action_buttons)
+        
+        self.central_area.addWidget(self.bottom_block)
+        
+        main_layout.addLayout(self.central_area)
+        
+        # Инициализируем данные для книг (стартовая страница)
+        self.show_category("books")
 
-        while True:
-            print("\nМеню управления системой мониторинга книжными магазинами")
-            print("1. Книги")
-            print("2. Жанры")
-            print("3. Авторы")
-            print("4. Покупатели")
-            print("5. Магазины")
-            print("0. Выход")
-            choice = input("Выберите действие: ")
+    def show_category(self, category):
+        """Показывает информацию для выбранной категории"""
+        # Сначала отключаем только если есть подключения
+        try:
+            self.add_btn.clicked.disconnect()
+        except TypeError:
+            pass  # Нет подключений, ничего делать не нужно
+        
+        # Скрываем все специальные кнопки
+        self.add_to_store_btn.hide()
+        self.show_store_btn.hide()
+        
+        if category == "books":
+            self.update_books_info()
+            self.add_btn.setText("Добавить книгу")
+            self.add_btn.clicked.connect(self.show_add_book_dialog)
+            self.add_to_store_btn.show()
+        elif category == "authors":
+            self.update_authors_info()
+            self.add_btn.setText("Добавить автора")
+            self.add_btn.clicked.connect(self.show_add_author_dialog)
+        elif category == "genres":
+            self.update_genres_info()
+            self.add_btn.setText("Добавить жанр")
+            self.add_btn.clicked.connect(self.show_add_genre_dialog)
+        elif category == "stores":
+            self.update_stores_info()
+            self.add_btn.setText("Добавить магазин")
+            self.add_btn.clicked.connect(self.show_add_store_dialog)
+            self.show_store_btn.show()
+        elif category == "customers":
+            self.update_customers_info()
+            self.add_btn.setText("Добавить покупателя")
+            self.add_btn.clicked.connect(self.show_add_customer_dialog)
 
-            if choice == "1":
-                logger.log_operation("Выбран раздел 'Книги'")
-                while True:
-                    print(f"\nМеню управления книгами")
-                    print(f"1. Показать все книги")
-                    print(f"2. Добавить книгу в базу данных")
-                    print(f"3. Добавить книгу в библиотеку")
-                    print(f"0. Назад")
-                    book_choice = input("Выберите действие для книг: ")
-
-                    if book_choice == "1":
-                        logger.log_operation("Просмотр списка книг")
-                        format_book = lambda b: f"{b.name} (Автор: {b.author.name}, Жанр: {b.genre.name}, Цена: {b.price}р)"
-                        sorted_books = sorted(books, key=lambda b: b.price)
-                        for book in sorted_books:
-                            print(format_book(book))
-                            
-                    elif book_choice == "2":
-                        logger.log_operation("Добавление новой книги")
-                        book_title = input("Введите название книги: ")
-                        author_name = input("Введите имя автора: ")
-                        genre_name = input("Введите название жанра: ")
-                        price = float(input("Введите цену книги: "))
-                        
-                        new_book = Book(book_title, Author(author_name), Genre(genre_name), price)
-                        add_book(conn, book_title, author_name, genre_name, price)
-                        books.append(new_book)
-                        print(f"Книга '{book_title}' добавлена в базу данных.")
-                        
-                    elif book_choice == "3":
-                        logger.log_operation("Добавление книги в библиотеку магазина")
-                        print("Доступные книги:")
-                        for idx, book in enumerate(books):
-                            print(f"{idx + 1}. {book.name} - Автор: {book.author.name}, Жанр: {book.genre.name}, Цена: {book.price}Р")
-                        
-                        book_choice = int(input("Выберите номер книги для добавления в библиотеку: ")) - 1
-                        store_name = input("Введите название магазина: ")
-                        
-                        if store_name in stores:
-                            selected_book = books[book_choice]
-                            stores[store_name].add_book_with_conn(conn, selected_book)
-                            print(f"Книга '{selected_book.name}' добавлена в библиотеку магазина '{store_name}'.")
-                        else:
-                            print("Магазин не найден.")
-                            
-                    elif book_choice == "0":
-                        break
-                    else:
-                        print("Неверный ввод")
-
-            elif choice == "2":
-                logger.log_operation("Выбран раздел 'Жанры'")
-                while True:
-                    print("\nМеню управления жанрами")
-                    print("1. Показать все жанры")
-                    print("2. Добавить жанр")
-                    print("0. Назад")
-                    genre_choice = input("Выберите действие для жанров: ")
-
-                    if genre_choice == "1":
-                        for genre in genres.values():
-                            print(genre)
-                    elif genre_choice == "2":
-                        genre_name = input("Введите название жанра: ")
-                        new_genre = Genre(genre_name)
-                        genres[genre_name] = new_genre
-                        print(f"Жанр '{genre_name}' добавлен.")
-                    elif genre_choice == "0":
-                        break
-                    else:
-                        print("Неверный ввод")
-
-            elif choice == "3":
-                logger.log_operation("Выбран раздел 'Авторы'")
-                while True:
-                    print("\nМеню управления авторами")
-                    print("1. Показать всех авторов")
-                    print("2. Добавить автора")
-                    print("0. Назад")
-                    author_choice = input("Выберите действие для авторов: ")
-
-                    if author_choice == "1":
-                        format_author = lambda a: f"{a.name} (Книг: {sum(1 for b in books if b.author.name == a.name)})"
-                        for author in authors.values():
-                            print(format_author(author))
-                            
-                    elif author_choice == "2":
-                        author_name = input("Введите имя автора: ")
-                        new_author = Author(author_name)
-                        authors[author_name] = new_author
-                        print(f"Автор '{author_name}' добавлен.")
-                    elif author_choice == "0":
-                        break
-                    else:
-                        print("Неверный ввод")
-
-            elif choice == "4":
-                logger.log_operation("Выбран раздел 'Покупатели'")
-                while True:
-                    print("\nМеню управления покупателями")
-                    print("1. Показать всех покупателей")
-                    print("2. Добавить покупателя")
-                    print("0. Назад")
-                    customer_choice = input("Выберите действие для покупателей: ")
-
-                    if customer_choice == "1":
-                        for customer in customers.values():
-                            print(customer)
-                    elif customer_choice == "2":
-                        customer_name = input("Введите имя покупателя: ")
-                        new_customer = Customer(customer_name)
-                        customers[customer_name] = new_customer
-                        print(f"Покупатель '{customer_name}' добавлен.")
-                    elif customer_choice == "0":
-                        break
-                    else:
-                        print("Неверный ввод")
-
-            elif choice == "5":
-                logger.log_operation("Выбран раздел 'Магазины'")
-                while True:
-                    print("\nМеню управления магазинами")
-                    print("1. Показать все магазины")
-                    print("2. Добавить магазин")
-                    print("3. Показать библиотеку магазина")
-                    print("0. Назад")
-                    store_choice = input("Выберите действие для магазинов: ")
-
-                    if store_choice == "1":
-                        analyze_store = lambda s: (
-                            f"{s.name} (Книг: {len(s.library)}, "
-                            f"Средняя цена: {sum(b.price for b in s.library)/len(s.library):.2f}р)"
-                            if s.library else f"{s.name} (Библиотека пуста)"
-                        )
-                        for store in stores.values():
-                            print(analyze_store(store))
-                            
-                    elif store_choice == "2":
-                        store_name = input("Введите название магазина: ")
-                        new_store = Store(store_name)
-                        stores[store_name] = new_store
-                        print(f"Магазин '{store_name}' добавлен.")
-                    elif store_choice == "3":
-                        store_name = input("Введите название магазина для просмотра библиотеки: ")
-                        if store_name in stores:
-                            print(f"Библиотека магазина '{store_name}':")
-                            for book in stores[store_name].library:
-                                print(book)
-                        else:
-                            print("Магазин не найден.")
-                    elif store_choice == "0":
-                        break
-                    else:
-                        print("Неверный ввод")
-
-            elif choice == "0":
-                logger.log_info("Завершение работы программы")
-                break
+    def update_books_info(self):
+        """Обновляет информацию о книгах"""
+        # Обновляем 5 информационных блоков
+        for i, (block, title, content) in enumerate(self.info_blocks[:5]):
+            if i < len(self.books):
+                book = self.books[i]
+                title.setText(f"Книга: {book.name}")
+                text = f"Автор: {book.author.name}\nЖанр: {book.genre.name}\nЦена: {book.price}р"
+                content.setText(text)
             else:
-                logger.log_error("Неверный ввод в главном меню")
-                print("Неверный ввод")
+                title.setText("Книга")
+                content.setText("Нет данных")
+        
+        # Обновляем нижний блок
+        self.bottom_block.setTitle("Общее о книгах")
+        self.bottom_content.setText(f"Всего книг: {len(self.books)}\nСредняя цена: {self.calculate_avg_price():.2f}р")
 
-        conn.close()
-        logger.log_info("Соединение с базой данных закрыто")
-    except Exception as e:
-        logger.log_error(f"Ошибка в работе программы: {str(e)}")
-        print(f"Произошла ошибка: {str(e)}")
+    def update_authors_info(self):
+        """Обновляет информацию об авторах"""
+        for i, (block, title, content) in enumerate(self.info_blocks[:5]):
+            if i < len(self.authors):
+                author = self.authors[i]
+                book_count = sum(1 for book in self.books if book.author.name == author.name)
+                genres = set(book.genre.name for book in self.books if book.author.name == author.name)
+                
+                title.setText(f"Автор: {author.name}")
+                text = f"Книг: {book_count}\nЖанры: {', '.join(genres) if genres else 'нет'}"
+                content.setText(text)
+            else:
+                title.setText("Автор")
+                content.setText("Нет данных")
+        
+        self.bottom_block.setTitle("Общее об авторах")
+        self.bottom_content.setText(f"Всего авторов: {len(self.authors)}\nСреднее книг на автора: {len(self.books)/len(self.authors) if self.authors else 0:.1f}")
+
+    def update_genres_info(self):
+        """Обновляет информацию о жанрах"""
+        for i, (block, title, content) in enumerate(self.info_blocks[:5]):
+            if i < len(self.genres):
+                genre = self.genres[i]
+                book_count = sum(1 for book in self.books if book.genre.name == genre.name)
+                authors = set(book.author.name for book in self.books if book.genre.name == genre.name)
+                
+                title.setText(f"Жанр: {genre.name}")
+                text = f"Книг: {book_count}\nАвторы: {', '.join(authors) if authors else 'нет'}"
+                content.setText(text)
+            else:
+                title.setText("Жанр")
+                content.setText("Нет данных")
+        
+        self.bottom_block.setTitle("Общее о жанрах")
+        self.bottom_content.setText(f"Всего жанров: {len(self.genres)}\nСреднее книг на жанр: {len(self.books)/len(self.genres) if self.genres else 0:.1f}")
+
+    def update_stores_info(self):
+        """Обновляет информацию о магазинах"""
+        for i, (block, title, content) in enumerate(self.info_blocks[:5]):
+            if i < len(self.stores):
+                store = self.stores[i]
+                title.setText(f"Магазин: {store.name}")
+                text = f"Книг: {len(store.library)}\n"
+                content.setText(text)
+            else:
+                title.setText("Магазин")
+                content.setText("Нет данных")
+        
+        self.bottom_block.setTitle("Общее о магазинах")
+        total_books = sum(len(store.library) for store in self.stores)
+        self.bottom_content.setText(f"Всего магазинов: {len(self.stores)}\nВсего книг в магазинах: {total_books}")
+
+    def update_customers_info(self):
+        """Обновляет информацию о покупателях"""
+        for i, (block, title, content) in enumerate(self.info_blocks[:5]):
+            if i < len(self.customers):
+                customer = self.customers[i]
+                title.setText(f"Покупатель: {customer.name}")
+                content.setText("Информация о покупках")
+            else:
+                title.setText("Покупатель")
+                content.setText("Нет данных")
+        
+        self.bottom_block.setTitle("Общее о покупателях")
+        self.bottom_content.setText(f"Всего покупателей: {len(self.customers)}")
+
+    def calculate_avg_price(self):
+        """Вычисляет среднюю цену книг"""
+        if not self.books:
+            return 0
+        return sum(book.price for book in self.books) / len(self.books)
+
+    # Диалоговые окна добавления (остаются без изменений)
+    def show_add_book_dialog(self):
+        """Диалог добавления книги"""
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Добавить книгу")
+        dialog.setFixedSize(400, 300)
+        
+        layout = QVBoxLayout(dialog)
+        
+        title = QLabel("# Добавить книгу")
+        title.setStyleSheet("font-size: 16px; font-weight: bold;")
+        layout.addWidget(title)
+        
+        form = QFormLayout()
+        
+        title_input = QLineEdit()
+        form.addRow("Название:", title_input)
+        
+        author_input = QComboBox()
+        author_input.addItems([a.name for a in self.authors])
+        form.addRow("Автор:", author_input)
+        
+        genre_input = QComboBox()
+        genre_input.addItems([g.name for g in self.genres])
+        form.addRow("Жанр:", genre_input)
+        
+        price_input = QLineEdit()
+        price_input.setValidator(QDoubleValidator())
+        form.addRow("Цена:", price_input)
+        
+        layout.addLayout(form)
+        
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.accepted.connect(lambda: self.add_new_book(
+            title_input.text(),
+            author_input.currentText(),
+            genre_input.currentText(),
+            price_input.text(),
+            dialog
+        ))
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+        
+        dialog.exec_()
+
+    def show_add_to_store_dialog(self):
+        """Диалог добавления книги в магазин"""
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Добавить книгу в библиотеку")
+        dialog.setFixedSize(400, 200)
+        
+        layout = QVBoxLayout(dialog)
+        
+        title = QLabel("# Добавить книгу в библиотеку")
+        title.setStyleSheet("font-size: 16px; font-weight: bold;")
+        layout.addWidget(title)
+        
+        form = QFormLayout()
+        
+        book_combo = QComboBox()
+        book_combo.addItems([b.name for b in self.books])
+        form.addRow("Название книги:", book_combo)
+        
+        store_combo = QComboBox()
+        store_combo.addItems([s.name for s in self.stores])
+        form.addRow("Название магазина:", store_combo)
+        
+        layout.addLayout(form)
+        
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.accepted.connect(lambda: self.add_book_to_store(
+            book_combo.currentText(),
+            store_combo.currentText(),
+            dialog
+        ))
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+        
+        dialog.exec_()
+
+    def show_store_books_dialog(self):
+        """Диалог просмотра книг магазина"""
+        if not self.stores:
+            QMessageBox.warning(self, "Ошибка", "Нет доступных магазинов")
+            return
+            
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Книги в магазине")
+        dialog.setFixedSize(600, 400)
+        
+        layout = QVBoxLayout(dialog)
+        
+        store_combo = QComboBox()
+        store_combo.addItems([s.name for s in self.stores])
+        layout.addWidget(store_combo)
+        
+        books_list = QListWidget()
+        layout.addWidget(books_list)
+        
+        def update_books_list():
+            store_name = store_combo.currentText()
+            store = next((s for s in self.stores if s.name == store_name), None)
+            books_list.clear()
+            if store and store.library:
+                for book in store.library:
+                    books_list.addItem(f"{book.name} ({book.author.name})")
+        
+        store_combo.currentTextChanged.connect(update_books_list)
+        update_books_list()
+        
+        dialog.exec_()
+
+    # Методы добавления новых элементов
+    def add_new_book(self, title, author_name, genre_name, price_str, dialog):
+        try:
+            if not all([title, author_name, genre_name, price_str]):
+                QMessageBox.warning(self, "Ошибка", "Все поля должны быть заполнены")
+                return
+            
+            price = float(price_str)
+            
+            if author_name not in [a.name for a in self.authors]:
+                if add_author(self.conn, author_name):
+                    self.authors.append(Author(author_name))
+            
+            if genre_name not in [g.name for g in self.genres]:
+                if add_genre(self.conn, genre_name):
+                    self.genres.append(Genre(genre_name))
+            
+            if add_book(self.conn, title, author_name, genre_name, price):
+                new_book = Book(title, Author(author_name), Genre(genre_name), price)
+                self.books.append(new_book)
+                self.update_books_info()
+                QMessageBox.information(self, "Успех", "Книга успешно добавлена")
+                dialog.accept()
+            else:
+                QMessageBox.warning(self, "Ошибка", "Не удалось добавить книгу")
+                
+        except ValueError:
+            QMessageBox.warning(self, "Ошибка", "Введите корректную цену")
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Произошла ошибка: {str(e)}")
+
+    def add_book_to_store(self, book_title, store_name, dialog):
+        try:
+            book = next((b for b in self.books if b.name == book_title), None)
+            store = next((s for s in self.stores if s.name == store_name), None)
+            
+            if book and store:
+                store.add_book_with_conn(self.conn, book)
+                self.update_stores_info()
+                QMessageBox.information(self, "Успех", "Книга добавлена в магазин")
+                dialog.accept()
+            else:
+                QMessageBox.warning(self, "Ошибка", "Не удалось найти книгу или магазин")
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Произошла ошибка: {str(e)}")
+
+    def show_add_author_dialog(self):
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Добавить автора")
+        dialog.setFixedSize(300, 150)
+        
+        layout = QVBoxLayout(dialog)
+        
+        title = QLabel("# Добавить объект")
+        title.setStyleSheet("font-size: 16px; font-weight: bold;")
+        layout.addWidget(title)
+        
+        form = QFormLayout()
+        
+        name_input = QLineEdit()
+        form.addRow("Название:", name_input)
+        
+        layout.addLayout(form)
+        
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.accepted.connect(lambda: self.add_new_author(name_input.text(), dialog))
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+        
+        dialog.exec_()
+
+    def add_new_author(self, name, dialog):
+        if not name:
+            QMessageBox.warning(self, "Ошибка", "Введите имя автора")
+            return
+        
+        if add_author(self.conn, name):
+            self.authors.append(Author(name))
+            self.update_authors_info()
+            QMessageBox.information(self, "Успех", "Автор успешно добавлен")
+            dialog.accept()
+        else:
+            QMessageBox.warning(self, "Ошибка", "Не удалось добавить автора")
+
+    def show_add_genre_dialog(self):
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Добавить жанр")
+        dialog.setFixedSize(300, 150)
+        
+        layout = QVBoxLayout(dialog)
+        
+        title = QLabel("# Добавить объект")
+        title.setStyleSheet("font-size: 16px; font-weight: bold;")
+        layout.addWidget(title)
+        
+        form = QFormLayout()
+        
+        name_input = QLineEdit()
+        form.addRow("Название:", name_input)
+        
+        layout.addLayout(form)
+        
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.accepted.connect(lambda: self.add_new_genre(name_input.text(), dialog))
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+        
+        dialog.exec_()
+
+    def add_new_genre(self, name, dialog):
+        if not name:
+            QMessageBox.warning(self, "Ошибка", "Введите название жанра")
+            return
+        
+        if add_genre(self.conn, name):
+            self.genres.append(Genre(name))
+            self.update_genres_info()
+            QMessageBox.information(self, "Успех", "Жанр успешно добавлен")
+            dialog.accept()
+        else:
+            QMessageBox.warning(self, "Ошибка", "Не удалось добавить жанр")
+
+    def show_add_store_dialog(self):
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Добавить магазин")
+        dialog.setFixedSize(300, 150)
+        
+        layout = QVBoxLayout(dialog)
+        
+        title = QLabel("# Добавить объект")
+        title.setStyleSheet("font-size: 16px; font-weight: bold;")
+        layout.addWidget(title)
+        
+        form = QFormLayout()
+        
+        name_input = QLineEdit()
+        form.addRow("Название:", name_input)
+        
+        layout.addLayout(form)
+        
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.accepted.connect(lambda: self.add_new_store(name_input.text(), dialog))
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+        
+        dialog.exec_()
+
+    def add_new_store(self, name, dialog):
+        if not name:
+            QMessageBox.warning(self, "Ошибка", "Введите название магазина")
+            return
+        
+        if add_store(self.conn, name):
+            self.stores.append(Store(name))
+            self.update_stores_info()
+            QMessageBox.information(self, "Успех", "Магазин успешно добавлен")
+            dialog.accept()
+        else:
+            QMessageBox.warning(self, "Ошибка", "Не удалось добавить магазин")
+
+    def show_add_customer_dialog(self):
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Добавить покупателя")
+        dialog.setFixedSize(300, 150)
+        
+        layout = QVBoxLayout(dialog)
+        
+        title = QLabel("# Добавить объект")
+        title.setStyleSheet("font-size: 16px; font-weight: bold;")
+        layout.addWidget(title)
+        
+        form = QFormLayout()
+        
+        name_input = QLineEdit()
+        form.addRow("Название:", name_input)
+        
+        layout.addLayout(form)
+        
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.accepted.connect(lambda: self.add_new_customer(name_input.text(), dialog))
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+        
+        dialog.exec_()
+
+    def add_new_customer(self, name, dialog):
+        if not name:
+            QMessageBox.warning(self, "Ошибка", "Введите имя покупателя")
+            return
+        
+        if add_customer(self.conn, name):
+            self.customers.append(Customer(name))
+            self.update_customers_info()
+            QMessageBox.information(self, "Успех", "Покупатель успешно добавлен")
+            dialog.accept()
+        else:
+            QMessageBox.warning(self, "Ошибка", "Не удалось добавить покупателя")
+
+    def closeEvent(self, event):
+        self.conn.close()
+        logger.log_info("Приложение закрыто")
+        event.accept()
 
 if __name__ == "__main__":
-    main()
+    try:
+        app = QApplication(sys.argv)
+        window = BookStoreApp()
+        window.show()
+        sys.exit(app.exec_())
+    except Exception as e:
+        logger.log_error(f"Критическая ошибка: {str(e)}")
+        QMessageBox.critical(None, "Ошибка", f"Не удалось запустить приложение: {str(e)}")
+        sys.exit(1)
