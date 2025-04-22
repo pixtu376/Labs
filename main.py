@@ -1,84 +1,106 @@
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
 import sys
 import os
 import sqlite3
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-                            QLabel, QPushButton, QLineEdit, QComboBox, QListWidget,
-                            QTabWidget, QFormLayout, QMessageBox, QStackedWidget, QDialog,
-                            QDialogButtonBox, QGridLayout, QFrame, QGroupBox, QSizePolicy)
-from PyQt5.QtGui import QDoubleValidator, QFont, QColor, QPalette
-from PyQt5.QtCore import Qt, QLibraryInfo, QSize
-from database import create_tables, add_book, add_author, add_genre, add_store, add_customer
-from classes import Book, Author, Genre, Store, Customer
-from logger import logger
+from PyQt5.QtWidgets import (
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+    QLabel, QPushButton, QLineEdit, QComboBox, QListWidget,
+    QDialog, QDialogButtonBox, QFormLayout, QGroupBox, QMessageBox, QFrame
+)
+from PyQt5.QtGui import QDoubleValidator, QFont
+from PyQt5.QtCore import Qt, QLibraryInfo
 
-os.environ['QT_QPA_PLATFORM_PLUGIN_PATH'] = QLibraryInfo.location(QLibraryInfo.PluginsPath) + '\\platforms'
+from classes import Book, Author, Genre, Store, Customer
+import database
+from logger import logger
 
 class BookStoreApp(QMainWindow):
     def __init__(self):
         super().__init__()
-        logger.log_info("Инициализация приложения")
+        self.setWindowTitle("Управление книжным магазином")
+        self.setFixedSize(800, 450)
         
-        try:
-            # Подключение к базе данных
-            self.conn = sqlite3.connect('books.db')
-            create_tables(self.conn)
-            logger.log_info("База данных подключена")
-            
-            # Загрузка данных
-            self.books = []
-            self.authors = []
-            self.genres = []
-            self.stores = []
-            self.customers = []
-            self.load_initial_data()
-            
-            # Настройка интерфейса
-            self.setup_ui()
-            logger.log_info("Интерфейс настроен")
-            
-        except Exception as e:
-            logger.log_error(f"Ошибка инициализации: {str(e)}")
-            raise
+        # Подключение к базе данных
+        self.conn = sqlite3.connect('books.db')
+        database.create_tables(self.conn)
+        
+        # Загрузка данных
+        self.load_data()
+        
+        # Инициализация текущей категории и индекса
+        self.current_category = None
+        self.current_index = 0
+        
+        # Настройка интерфейса
+        self.setup_ui()
+        
+        # Показать стартовую страницу (книги)
+        self.show_category("books")
 
-    def load_initial_data(self):
-        """Загрузка начальных данных из базы"""
-        try:
-            # Загрузка книг
-            cur = self.conn.cursor()
-            cur.execute("SELECT title, author, genre, price FROM books")
-            self.books = [Book(title, Author(author), Genre(genre), price) 
-                         for title, author, genre, price in cur.fetchall()]
-            
-            # Загрузка авторов
-            cur.execute("SELECT name FROM authors")
-            self.authors = [Author(name[0]) for name in cur.fetchall()]
-            
-            # Загрузка жанров
-            cur.execute("SELECT name FROM genres")
-            self.genres = [Genre(name[0]) for name in cur.fetchall()]
-            
-            # Загрузка магазинов
-            cur.execute("SELECT name FROM stores")
-            self.stores = [Store(name[0]) for name in cur.fetchall()]
-            
-            # Загрузка покупателей
-            cur.execute("SELECT name FROM customers")
-            self.customers = [Customer(name[0]) for name in cur.fetchall()]
-            
-            logger.log_info("Данные успешно загружены")
-        except Exception as e:
-            logger.log_error(f"Ошибка загрузки данных: {str(e)}")
-            raise
+    def load_data(self):
+        """Загрузка данных из базы данных"""
+        self.books = []
+        self.authors = []
+        self.genres = []
+        self.stores = []
+        self.customers = []
+        
+        cur = self.conn.cursor()
+        
+        # Загрузка авторов
+        cur.execute("SELECT name FROM authors")
+        self.authors = [Author(row[0]) for row in cur.fetchall()]
+        
+        # Загрузка жанров
+        cur.execute("SELECT name FROM genres")
+        self.genres = [Genre(row[0]) for row in cur.fetchall()]
+        
+        # Загрузка книг
+        cur.execute("SELECT title, author, genre, price FROM books")
+        self.books = [Book(row[0], Author(row[1]), Genre(row[2]), row[3]) for row in cur.fetchall()]
+        
+        # Загрузка магазинов
+        cur.execute("SELECT name FROM stores")
+        for row in cur.fetchall():
+            store = Store(row[0])
+            # Загрузка книг для магазина
+            cur.execute("SELECT book_title FROM store_books WHERE store_name = ?", (row[0],))
+            for book_row in cur.fetchall():
+                book = next((b for b in self.books if b.name == book_row[0]), None)
+                if book:
+                    store.library.append(book)
+            self.stores.append(store)
+        
+        # Загрузка покупателей
+        cur.execute("SELECT name FROM customers")
+        self.customers = [Customer(row[0]) for row in cur.fetchall()]
 
     def setup_ui(self):
-        """Настройка пользовательского интерфейса по макетам"""
-        self.setWindowTitle("Управление книжным магазином")
-        self.setGeometry(100, 100, 1200, 800)
+        """Настройка пользовательского интерфейса"""
+        # Центральный виджет
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
         
-        # Зелёная цветовая схема
+        # Главный layout
+        main_layout = QVBoxLayout(central_widget)
+        main_layout.setContentsMargins(10, 10, 10, 10)
+        main_layout.setSpacing(2)
+        
+        # Верхняя панель навигации (выровнена по правому краю)
+        self.setup_top_navigation(main_layout)
+        
+        # Центральная область с информационными блоками
+        self.setup_info_blocks(main_layout)
+        
+        # Панель кнопок добавления (по центру)
+        self.setup_action_buttons(main_layout)
+        
+        # Установка стилей
         self.setStyleSheet("""
             QMainWindow {
-                background-color: #f0f9f0;
+                background-color: white;
             }
             QGroupBox {
                 background-color: white;
@@ -93,6 +115,7 @@ class BookStoreApp(QMainWindow):
                 padding: 0 3px;
                 color: #333;
                 font-weight: bold;
+                font-size: 14px;
             }
             QPushButton {
                 background-color: #4CAF50;
@@ -100,7 +123,6 @@ class BookStoreApp(QMainWindow):
                 color: white;
                 padding: 8px 16px;
                 text-align: center;
-                text-decoration: none;
                 font-size: 14px;
                 margin: 4px 2px;
                 border-radius: 4px;
@@ -110,13 +132,14 @@ class BookStoreApp(QMainWindow):
             }
             QLabel {
                 font-size: 14px;
-                margin: 5px;
+                margin: 6px;
                 color: #333;
             }
             QListWidget {
                 background-color: white;
                 border: 1px solid #a0c0a0;
                 border-radius: 4px;
+                font-size: 14px;
             }
             QLineEdit, QComboBox {
                 padding: 6px;
@@ -126,245 +149,393 @@ class BookStoreApp(QMainWindow):
                 background-color: white;
             }
         """)
+
+    def setup_top_navigation(self, main_layout):
+        """Настройка верхней панели навигации (выровнена по правому краю)"""
+        nav_frame = QFrame()
+        nav_frame.setStyleSheet("background-color: green;")  # Зеленый фон блока
+        nav_frame.setFixedHeight(int(35 * 1.6))  # Высота блока 160% от высоты кнопки
+        nav_layout = QHBoxLayout(nav_frame)
+        nav_layout.setContentsMargins(0, 0, 0, 0)
+        nav_layout.setSpacing(2)
         
-        # Центральный виджет
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-        main_layout = QVBoxLayout(central_widget)
-        main_layout.setContentsMargins(10, 10, 10, 10)
-        main_layout.setSpacing(15)
+        # Добавляем растягивающий элемент слева
+        nav_layout.addStretch()
         
-        # Верхняя панель с кнопками навигации
-        self.top_nav = QHBoxLayout()
-        self.top_nav.setSpacing(10)
-        
+        # Кнопки навигации
         self.books_btn = QPushButton("Книги")
         self.authors_btn = QPushButton("Авторы")
         self.genres_btn = QPushButton("Жанры")
         self.stores_btn = QPushButton("Магазины")
         self.customers_btn = QPushButton("Покупатели")
         
+        # Установка размера и стиля
+        for btn in [self.books_btn, self.authors_btn, self.genres_btn, 
+                   self.stores_btn, self.customers_btn]:
+            btn.setFixedSize(int(100 * 1.1), 35)  # Кнопки на 10% шире
+            btn.setFont(QFont("Arial", 10))
+            btn.setStyleSheet(
+                "background-color: #4B0000;"  # Тёмно-багровый фон кнопок
+                "color: white;"               # Белый цвет текста
+                "border-radius: 6px;"         # Немного закругленные углы
+            )
+        
+        # Подключение обработчиков
         self.books_btn.clicked.connect(lambda: self.show_category("books"))
         self.authors_btn.clicked.connect(lambda: self.show_category("authors"))
         self.genres_btn.clicked.connect(lambda: self.show_category("genres"))
         self.stores_btn.clicked.connect(lambda: self.show_category("stores"))
         self.customers_btn.clicked.connect(lambda: self.show_category("customers"))
         
-        # Устанавливаем фиксированный размер для кнопок
-        for btn in [self.books_btn, self.authors_btn, self.genres_btn, 
-                   self.stores_btn, self.customers_btn]:
-            btn.setFixedSize(120, 40)
+        # Добавление в layout
+        nav_layout.addWidget(self.books_btn)
+        nav_layout.addWidget(self.authors_btn)
+        nav_layout.addWidget(self.genres_btn)
+        nav_layout.addWidget(self.stores_btn)
+        nav_layout.addWidget(self.customers_btn)
         
-        self.top_nav.addWidget(self.books_btn)
-        self.top_nav.addWidget(self.authors_btn)
-        self.top_nav.addWidget(self.genres_btn)
-        self.top_nav.addWidget(self.stores_btn)
-        self.top_nav.addWidget(self.customers_btn)
-        self.top_nav.addStretch()
-        
-        main_layout.addLayout(self.top_nav)
-        
-        # Центральная область с информационными блоками
-        self.central_area = QVBoxLayout()
-        
-        # Верхняя строка с 5 блоками
-        self.top_row = QHBoxLayout()
-        self.top_row.setSpacing(15)
-        
-        # Создаем 5 информационных блоков одинакового размера
+        main_layout.addWidget(nav_frame)
+
+    def setup_info_blocks(self, main_layout):
+        """Настройка информационных блоков с кнопками навигации"""
         self.info_blocks = []
-        for i in range(5):
+        
+        # Кнопка "назад" слева
+        self.prev_btn = QPushButton("←")
+        self.prev_btn.setFixedSize(60, 60)
+        self.prev_btn.setFont(QFont("Arial", 24))
+        self.prev_btn.setStyleSheet("padding: 10px;")  # Внутренний отступ кнопки
+        self.prev_btn.clicked.connect(lambda: self.navigate_blocks(-1, 5))
+        
+        # Кнопка "вперед" справа
+        self.next_btn = QPushButton("→")
+        self.next_btn.setFixedSize(60, 60)
+        self.next_btn.setFont(QFont("Arial", 24))
+        self.next_btn.setStyleSheet("padding: 10px;")  # Внутренний отступ кнопки
+        self.next_btn.clicked.connect(lambda: self.navigate_blocks(1, 5))
+        
+        # Вертикальный layout для двух рядов блоков
+        blocks_layout = QVBoxLayout()
+        blocks_layout.setSpacing(1)  # Уменьшенное расстояние между рядами
+        
+        # Первый ряд: 3 блока информации
+        top_row = QHBoxLayout()
+        top_row.setSpacing(5)
+        
+        # Создаем 3 блока для верхнего ряда
+        for i in range(3):
             block = QGroupBox()
-            block.setFixedSize(220, 220)  # Фиксированный размер блоков
+            block.setFixedSize(200, 160)
             block_layout = QVBoxLayout(block)
             
             title = QLabel()
-            title.setStyleSheet("font-weight: bold; font-size: 16px;")
+            title.setFont(QFont("Arial", 12, QFont.Bold))
             block_layout.addWidget(title)
             
             content = QLabel()
+            content.setFont(QFont("Arial", 10))
             content.setWordWrap(True)
             block_layout.addWidget(content)
             
             self.info_blocks.append((block, title, content))
-            self.top_row.addWidget(block)
+            top_row.addWidget(block)
         
-        self.central_area.addLayout(self.top_row)
+        # Второй ряд: 1 блок слева, общая информация по центру, 1 блок справа
+        bottom_row = QHBoxLayout()
+        bottom_row.setSpacing(1)
         
-        # Нижний информационный блок с кнопками
-        self.bottom_block = QGroupBox()
-        bottom_layout = QVBoxLayout(self.bottom_block)
+        # Создаем левый блок нижнего ряда
+        left_block = QGroupBox()
+        left_block.setFixedSize(200, 140)
+        left_block_layout = QVBoxLayout(left_block)
         
-        self.bottom_content = QLabel()
-        self.bottom_content.setWordWrap(True)
-        bottom_layout.addWidget(self.bottom_content)
+        self.left_block_title = QLabel()
+        self.left_block_title.setFont(QFont("Arial", 12, QFont.Bold))
+        left_block_layout.addWidget(self.left_block_title)
         
-        # Кнопки действий
-        self.action_buttons = QHBoxLayout()
+        self.left_block_content = QLabel()
+        self.left_block_content.setFont(QFont("Arial", 10))
+        self.left_block_content.setWordWrap(True)
+        left_block_layout.addWidget(self.left_block_content)
         
+        self.info_blocks.append((left_block, self.left_block_title, self.left_block_content))
+        bottom_row.addWidget(left_block)
+        
+        # Центральный блок (общая информация)
+        self.center_block = QGroupBox()
+        self.center_block.setFixedSize(200, 140)
+        center_block_layout = QVBoxLayout(self.center_block)
+        
+        self.center_block_title = QLabel("Общая информация")
+        self.center_block_title.setFont(QFont("Arial", 12, QFont.Bold))
+        center_block_layout.addWidget(self.center_block_title)
+        
+        self.center_block_content = QLabel()
+        self.center_block_content.setFont(QFont("Arial", 10))
+        self.center_block_content.setWordWrap(True)
+        center_block_layout.addWidget(self.center_block_content)
+        
+        bottom_row.addWidget(self.center_block)
+        
+        # Создаем правый блок нижнего ряда
+        right_block = QGroupBox()
+        right_block.setFixedSize(200, 140)
+        right_block_layout = QVBoxLayout(right_block)
+        
+        self.right_block_title = QLabel()
+        self.right_block_title.setFont(QFont("Arial", 12, QFont.Bold))
+        right_block_layout.addWidget(self.right_block_title)
+        
+        self.right_block_content = QLabel()
+        self.right_block_content.setFont(QFont("Arial", 10))
+        self.right_block_content.setWordWrap(True)
+        right_block_layout.addWidget(self.right_block_content)
+        
+        self.info_blocks.append((right_block, self.right_block_title, self.right_block_content))
+        bottom_row.addWidget(right_block)
+        
+        # Создаем основной горизонтальный layout для кнопок и двух рядов
+        main_blocks_layout = QHBoxLayout()
+        main_blocks_layout.setSpacing(5)
+        
+        # Добавляем кнопку "назад" слева
+        main_blocks_layout.addWidget(self.prev_btn, alignment=Qt.AlignVCenter)
+        
+        # Создаем вертикальный layout для двух рядов
+        rows_layout = QVBoxLayout()
+        rows_layout.setSpacing(1)
+        rows_layout.addLayout(top_row)
+        rows_layout.addLayout(bottom_row)
+        
+        main_blocks_layout.addLayout(rows_layout)
+        
+        # Добавляем кнопку "вперед" справа
+        main_blocks_layout.addWidget(self.next_btn, alignment=Qt.AlignVCenter)
+        
+        blocks_layout.addLayout(main_blocks_layout)
+        
+        # Добавляем blocks_layout в основной layout для отображения
+        main_layout.addLayout(blocks_layout)
+
+    def navigate_blocks(self, direction, block_index):
+        """Навигация по блокам информации"""
+        logger.log_info(f"navigate_blocks called with direction={direction}, block_index={block_index}, current_index={self.current_index}, current_category={self.current_category}")
+        self.current_index += direction
+        
+        # Проверка границ
+        items = []
+        if self.current_category == "books":
+            items = self.books
+        elif self.current_category == "authors":
+            items = self.authors
+        elif self.current_category == "genres":
+            items = self.genres
+        elif self.current_category == "stores":
+            items = self.stores
+        elif self.current_category == "customers":
+            items = self.customers
+        
+        logger.log_info(f"Items count: {len(items)} before boundary check, current_index: {self.current_index}")
+        if self.current_index < 0:
+            self.current_index = 0
+        max_index = max(0, len(items) - block_index)
+        if self.current_index > max_index:
+            self.current_index = max_index
+        logger.log_info(f"Adjusted current_index: {self.current_index}")
+        
+        self.update_info_blocks()
+
+    def setup_action_buttons(self, main_layout):
+        """Настройка кнопок действий (по центру)"""
+        action_frame = QFrame()
+        action_layout = QHBoxLayout(action_frame)
+        action_layout.setContentsMargins(0, 0, 0, 0)
+        action_layout.setSpacing(2)
+        
+        # Добавляем растягивающие элементы с обеих сторон
+        action_layout.addStretch()
+        
+        # Основная кнопка добавления
         self.add_btn = QPushButton()
-        self.add_btn.setFixedSize(150, 40)
+        self.add_btn.setFixedSize(180, 40)
+        self.add_btn.setFont(QFont("Arial", 12))
         
+        # Кнопка "Добавить книгу в магазин"
         self.add_to_store_btn = QPushButton("Добавить книгу в магазин")
-        self.add_to_store_btn.setFixedSize(180, 40)
+        self.add_to_store_btn.setFixedSize(200, 40)
+        self.add_to_store_btn.setFont(QFont("Arial", 12))
         self.add_to_store_btn.clicked.connect(self.show_add_to_store_dialog)
         self.add_to_store_btn.hide()
         
+        # Кнопка "Показать библиотеку"
         self.show_store_btn = QPushButton("Показать библиотеку")
-        self.show_store_btn.setFixedSize(150, 40)
+        self.show_store_btn.setFixedSize(200, 40)
+        self.show_store_btn.setFont(QFont("Arial", 12))
         self.show_store_btn.clicked.connect(self.show_store_books_dialog)
         self.show_store_btn.hide()
         
-        self.action_buttons.addWidget(self.add_btn)
-        self.action_buttons.addWidget(self.add_to_store_btn)
-        self.action_buttons.addWidget(self.show_store_btn)
-        self.action_buttons.addStretch()
+        action_layout.addWidget(self.add_btn)
+        action_layout.addWidget(self.add_to_store_btn)
+        action_layout.addWidget(self.show_store_btn)
         
-        bottom_layout.addLayout(self.action_buttons)
+        # Добавляем растягивающий элемент с другой стороны
+        action_layout.addStretch()
         
-        self.central_area.addWidget(self.bottom_block)
-        
-        main_layout.addLayout(self.central_area)
-        
-        # Инициализируем данные для книг (стартовая страница)
-        self.show_category("books")
+        main_layout.addWidget(action_frame)
 
     def show_category(self, category):
-        """Показывает информацию для выбранной категории"""
-        # Сначала отключаем только если есть подключения
-        try:
-            self.add_btn.clicked.disconnect()
-        except TypeError:
-            pass  # Нет подключений, ничего делать не нужно
+        """Отображение выбранной категории"""
+        self.current_category = category
+        self.current_index = 0
         
-        # Скрываем все специальные кнопки
+        # Скрываем специальные кнопки
         self.add_to_store_btn.hide()
         self.show_store_btn.hide()
         
+        # Отключаем предыдущие соединения кнопки добавления
+        try:
+            self.add_btn.clicked.disconnect()
+        except TypeError:
+            pass
+        
+        # Устанавливаем текст кнопки добавления
         if category == "books":
-            self.update_books_info()
             self.add_btn.setText("Добавить книгу")
             self.add_btn.clicked.connect(self.show_add_book_dialog)
             self.add_to_store_btn.show()
         elif category == "authors":
-            self.update_authors_info()
             self.add_btn.setText("Добавить автора")
             self.add_btn.clicked.connect(self.show_add_author_dialog)
         elif category == "genres":
-            self.update_genres_info()
             self.add_btn.setText("Добавить жанр")
             self.add_btn.clicked.connect(self.show_add_genre_dialog)
         elif category == "stores":
-            self.update_stores_info()
             self.add_btn.setText("Добавить магазин")
             self.add_btn.clicked.connect(self.show_add_store_dialog)
             self.show_store_btn.show()
         elif category == "customers":
-            self.update_customers_info()
             self.add_btn.setText("Добавить покупателя")
             self.add_btn.clicked.connect(self.show_add_customer_dialog)
+        
+        # Обновляем информацию
+        self.update_info_blocks()
 
-    def update_books_info(self):
-        """Обновляет информацию о книгах"""
-        # Обновляем 5 информационных блоков
-        for i, (block, title, content) in enumerate(self.info_blocks[:5]):
-            if i < len(self.books):
-                book = self.books[i]
-                title.setText(f"Книга: {book.name}")
-                text = f"Автор: {book.author.name}\nЖанр: {book.genre.name}\nЦена: {book.price}р"
-                content.setText(text)
+    def update_info_blocks(self):
+        """Обновление информационных блоков"""
+        logger.log_info(f"update_info_blocks called with current_index={self.current_index}, current_category={self.current_category}")
+        items = []
+        if self.current_category == "books":
+            items = self.books
+        elif self.current_category == "authors":
+            items = self.authors
+        elif self.current_category == "genres":
+            items = self.genres
+        elif self.current_category == "stores":
+            items = self.stores
+        elif self.current_category == "customers":
+            items = self.customers
+        
+        logger.log_info(f"Items count: {len(items)}")
+        # Обновляем первые 3 блока
+        for i in range(3):
+            idx = self.current_index + i
+            logger.log_info(f"Updating block {i} with idx={idx}")
+            block, title, content = self.info_blocks[i]
+            
+            if idx < len(items):
+                item = items[idx]
+                if self.current_category == "books":
+                    title.setText(item.name)
+                    title.setAlignment(Qt.AlignCenter)
+                    content.setText(f"Автор: {item.author.name}\nЖанр: {item.genre.name}\nЦена: {item.price}р")
+                elif self.current_category == "authors":
+                    book_count = sum(1 for book in self.books if book.author.name == item.name)
+                    genres = set(book.genre.name for book in self.books if book.author.name == item.name)
+                    title.setText(item.name)
+                    title.setAlignment(Qt.AlignCenter)
+                    content.setText(f"Книг: {book_count}\nЖанры: {', '.join(genres) if genres else 'нет'}")
+                elif self.current_category == "genres":
+                    book_count = sum(1 for book in self.books if book.genre.name == item.name)
+                    authors = set(book.author.name for book in self.books if book.genre.name == item.name)
+                    title.setText(item.name)
+                    title.setAlignment(Qt.AlignCenter)
+                    content.setText(f"Книг: {book_count}\nАвторы: {', '.join(authors) if authors else 'нет'}")
+                elif self.current_category == "stores":
+                    title.setText(item.name)
+                    title.setAlignment(Qt.AlignCenter)
+                    content.setText(f"Книг: {len(item.library)}")
+                elif self.current_category == "customers":
+                    title.setText(item.name)
+                    title.setAlignment(Qt.AlignCenter)
+                    content.setText("Информация о покупках")
             else:
-                title.setText("Книга")
+                title.setText(self.current_category.capitalize())
+                title.setAlignment(Qt.AlignCenter)
                 content.setText("Нет данных")
         
-        # Обновляем нижний блок
-        self.bottom_block.setTitle("Общее о книгах")
-        self.bottom_content.setText(f"Всего книг: {len(self.books)}\nСредняя цена: {self.calculate_avg_price():.2f}р")
-
-    def update_authors_info(self):
-        """Обновляет информацию об авторах"""
-        for i, (block, title, content) in enumerate(self.info_blocks[:5]):
-            if i < len(self.authors):
-                author = self.authors[i]
-                book_count = sum(1 for book in self.books if book.author.name == author.name)
-                genres = set(book.genre.name for book in self.books if book.author.name == author.name)
-                
-                title.setText(f"Автор: {author.name}")
-                text = f"Книг: {book_count}\nЖанры: {', '.join(genres) if genres else 'нет'}"
-                content.setText(text)
+        # Обновляем левый и правый блоки (4 и 5 элементы)
+        for i in range(2):
+            idx = self.current_index + 3 + i
+            logger.log_info(f"Updating side block {i} with idx={idx}")
+            block, title, content = self.info_blocks[3 + i]
+            
+            if idx < len(items):
+                item = items[idx]
+                if self.current_category == "books":
+                    title.setText(item.name)
+                    title.setAlignment(Qt.AlignCenter)
+                    content.setText(f"Автор: {item.author.name}\nЖанр: {item.genre.name}\nЦена: {item.price}р")
+                elif self.current_category == "authors":
+                    book_count = sum(1 for book in self.books if book.author.name == item.name)
+                    genres = set(book.genre.name for book in self.books if book.author.name == item.name)
+                    title.setText(item.name)
+                    title.setAlignment(Qt.AlignCenter)
+                    content.setText(f"Книг: {book_count}\nЖанры: {', '.join(genres) if genres else 'нет'}")
+                elif self.current_category == "genres":
+                    book_count = sum(1 for book in self.books if book.genre.name == item.name)
+                    authors = set(book.author.name for book in self.books if book.author.name == item.name)
+                    title.setText(item.name)
+                    title.setAlignment(Qt.AlignCenter)
+                    content.setText(f"Книг: {book_count}\nАвторы: {', '.join(authors) if authors else 'нет'}")
+                elif self.current_category == "stores":
+                    title.setText(item.name)
+                    title.setAlignment(Qt.AlignCenter)
+                    content.setText(f"Книг: {len(item.library)}")
+                elif self.current_category == "customers":
+                    title.setText(item.name)
+                    title.setAlignment(Qt.AlignCenter)
+                    content.setText("Информация о покупках")
             else:
-                title.setText("Автор")
+                title.setText(self.current_category.capitalize())
+                title.setAlignment(Qt.AlignCenter)
                 content.setText("Нет данных")
         
-        self.bottom_block.setTitle("Общее об авторах")
-        self.bottom_content.setText(f"Всего авторов: {len(self.authors)}\nСреднее книг на автора: {len(self.books)/len(self.authors) if self.authors else 0:.1f}")
+        # Обновляем центральный блок с общей информацией
+        if self.current_category == "books":
+            avg_price = sum(book.price for book in self.books) / len(self.books) if self.books else 0
+            self.center_block_content.setText(f"Всего книг: {len(self.books)}\nСредняя цена: {avg_price:.2f}р")
+        elif self.current_category == "authors":
+            avg_books = len(self.books) / len(self.authors) if self.authors else 0
+            self.center_block_content.setText(f"Всего авторов: {len(self.authors)}\nСреднее книг на автора: {avg_books:.1f}")
+        elif self.current_category == "genres":
+            avg_books = len(self.books) / len(self.genres) if self.genres else 0
+            self.center_block_content.setText(f"Всего жанров: {len(self.genres)}\nСреднее книг на жанр: {avg_books:.1f}")
+        elif self.current_category == "stores":
+            total_books = sum(len(store.library) for store in self.stores)
+            self.center_block_content.setText(f"Всего магазинов: {len(self.stores)}\nВсего книг в магазинах: {total_books}")
+        elif self.current_category == "customers":
+            self.center_block_content.setText(f"Всего покупателей: {len(self.customers)}")
 
-    def update_genres_info(self):
-        """Обновляет информацию о жанрах"""
-        for i, (block, title, content) in enumerate(self.info_blocks[:5]):
-            if i < len(self.genres):
-                genre = self.genres[i]
-                book_count = sum(1 for book in self.books if book.genre.name == genre.name)
-                authors = set(book.author.name for book in self.books if book.genre.name == genre.name)
-                
-                title.setText(f"Жанр: {genre.name}")
-                text = f"Книг: {book_count}\nАвторы: {', '.join(authors) if authors else 'нет'}"
-                content.setText(text)
-            else:
-                title.setText("Жанр")
-                content.setText("Нет данных")
-        
-        self.bottom_block.setTitle("Общее о жанрах")
-        self.bottom_content.setText(f"Всего жанров: {len(self.genres)}\nСреднее книг на жанр: {len(self.books)/len(self.genres) if self.genres else 0:.1f}")
-
-    def update_stores_info(self):
-        """Обновляет информацию о магазинах"""
-        for i, (block, title, content) in enumerate(self.info_blocks[:5]):
-            if i < len(self.stores):
-                store = self.stores[i]
-                title.setText(f"Магазин: {store.name}")
-                text = f"Книг: {len(store.library)}\n"
-                content.setText(text)
-            else:
-                title.setText("Магазин")
-                content.setText("Нет данных")
-        
-        self.bottom_block.setTitle("Общее о магазинах")
-        total_books = sum(len(store.library) for store in self.stores)
-        self.bottom_content.setText(f"Всего магазинов: {len(self.stores)}\nВсего книг в магазинах: {total_books}")
-
-    def update_customers_info(self):
-        """Обновляет информацию о покупателях"""
-        for i, (block, title, content) in enumerate(self.info_blocks[:5]):
-            if i < len(self.customers):
-                customer = self.customers[i]
-                title.setText(f"Покупатель: {customer.name}")
-                content.setText("Информация о покупках")
-            else:
-                title.setText("Покупатель")
-                content.setText("Нет данных")
-        
-        self.bottom_block.setTitle("Общее о покупателях")
-        self.bottom_content.setText(f"Всего покупателей: {len(self.customers)}")
-
-    def calculate_avg_price(self):
-        """Вычисляет среднюю цену книг"""
-        if not self.books:
-            return 0
-        return sum(book.price for book in self.books) / len(self.books)
-
-    # Диалоговые окна добавления (остаются без изменений)
     def show_add_book_dialog(self):
-        """Диалог добавления книги"""
         dialog = QDialog(self)
         dialog.setWindowTitle("Добавить книгу")
-        dialog.setFixedSize(400, 300)
+        dialog.setFixedSize(400, 250)
         
         layout = QVBoxLayout(dialog)
         
-        title = QLabel("# Добавить книгу")
-        title.setStyleSheet("font-size: 16px; font-weight: bold;")
-        layout.addWidget(title)
+        title_label = QLabel("# Добавить книгу")
+        title_label.setStyleSheet("font-size: 16px; font-weight: bold;")
+        layout.addWidget(title_label)
         
         form = QFormLayout()
         
@@ -398,17 +569,51 @@ class BookStoreApp(QMainWindow):
         
         dialog.exec_()
 
+    def add_new_book(self, title, author_name, genre_name, price_str, dialog):
+        try:
+            if not all([title, author_name, genre_name, price_str]):
+                QMessageBox.warning(self, "Ошибка", "Все поля должны быть заполнены")
+                return
+            
+            price = float(price_str)
+            
+            if author_name not in [a.name for a in self.authors]:
+                if database.add_author(self.conn, author_name):
+                    self.authors.append(Author(author_name))
+            
+            if genre_name not in [g.name for g in self.genres]:
+                if database.add_genre(self.conn, genre_name):
+                    self.genres.append(Genre(genre_name))
+            
+            if database.add_book(self.conn, title, author_name, genre_name, price):
+                new_book = Book(title, Author(author_name), Genre(genre_name), price)
+                self.books.append(new_book)
+                self.update_info_blocks()
+                QMessageBox.information(self, "Успех", "Книга успешно добавлена")
+                dialog.accept()
+            else:
+                QMessageBox.warning(self, "Ошибка", "Не удалось добавить книгу")
+                
+        except ValueError:
+            QMessageBox.warning(self, "Ошибка", "Введите корректную цену")
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Произошла ошибка: {str(e)}")
+
     def show_add_to_store_dialog(self):
         """Диалог добавления книги в магазин"""
+        if not self.books or not self.stores:
+            QMessageBox.warning(self, "Ошибка", "Нет доступных книг или магазинов")
+            return
+            
         dialog = QDialog(self)
-        dialog.setWindowTitle("Добавить книгу в библиотеку")
+        dialog.setWindowTitle("Добавить книгу в магазин")
         dialog.setFixedSize(400, 200)
         
         layout = QVBoxLayout(dialog)
         
-        title = QLabel("# Добавить книгу в библиотеку")
-        title.setStyleSheet("font-size: 16px; font-weight: bold;")
-        layout.addWidget(title)
+        title_label = QLabel("# Добавить книгу в библиотеку")
+        title_label.setStyleSheet("font-size: 16px; font-weight: bold;")
+        layout.addWidget(title_label)
         
         form = QFormLayout()
         
@@ -433,15 +638,34 @@ class BookStoreApp(QMainWindow):
         
         dialog.exec_()
 
+    def add_book_to_store(self, book_title, store_name, dialog):
+        """Добавление книги в магазин"""
+        try:
+            book = next((b for b in self.books if b.name == book_title), None)
+            store = next((s for s in self.stores if s.name == store_name), None)
+            
+            if book and store:
+                if database.add_book_to_store(self.conn, store.name, book.name):
+                    store.add_book(book)
+                    self.update_info_blocks()
+                    QMessageBox.information(self, "Успех", "Книга добавлена в магазин")
+                    dialog.accept()
+                else:
+                    QMessageBox.warning(self, "Ошибка", "Не удалось добавить книгу в магазин")
+            else:
+                QMessageBox.warning(self, "Ошибка", "Книга или магазин не найдены")
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Произошла ошибка: {str(e)}")
+
     def show_store_books_dialog(self):
-        """Диалог просмотра книг магазина"""
+        """Диалог просмотра книг в магазине"""
         if not self.stores:
             QMessageBox.warning(self, "Ошибка", "Нет доступных магазинов")
             return
             
         dialog = QDialog(self)
         dialog.setWindowTitle("Книги в магазине")
-        dialog.setFixedSize(600, 400)
+        dialog.setFixedSize(500, 300)
         
         layout = QVBoxLayout(dialog)
         
@@ -465,52 +689,6 @@ class BookStoreApp(QMainWindow):
         
         dialog.exec_()
 
-    # Методы добавления новых элементов
-    def add_new_book(self, title, author_name, genre_name, price_str, dialog):
-        try:
-            if not all([title, author_name, genre_name, price_str]):
-                QMessageBox.warning(self, "Ошибка", "Все поля должны быть заполнены")
-                return
-            
-            price = float(price_str)
-            
-            if author_name not in [a.name for a in self.authors]:
-                if add_author(self.conn, author_name):
-                    self.authors.append(Author(author_name))
-            
-            if genre_name not in [g.name for g in self.genres]:
-                if add_genre(self.conn, genre_name):
-                    self.genres.append(Genre(genre_name))
-            
-            if add_book(self.conn, title, author_name, genre_name, price):
-                new_book = Book(title, Author(author_name), Genre(genre_name), price)
-                self.books.append(new_book)
-                self.update_books_info()
-                QMessageBox.information(self, "Успех", "Книга успешно добавлена")
-                dialog.accept()
-            else:
-                QMessageBox.warning(self, "Ошибка", "Не удалось добавить книгу")
-                
-        except ValueError:
-            QMessageBox.warning(self, "Ошибка", "Введите корректную цену")
-        except Exception as e:
-            QMessageBox.critical(self, "Ошибка", f"Произошла ошибка: {str(e)}")
-
-    def add_book_to_store(self, book_title, store_name, dialog):
-        try:
-            book = next((b for b in self.books if b.name == book_title), None)
-            store = next((s for s in self.stores if s.name == store_name), None)
-            
-            if book and store:
-                store.add_book_with_conn(self.conn, book)
-                self.update_stores_info()
-                QMessageBox.information(self, "Успех", "Книга добавлена в магазин")
-                dialog.accept()
-            else:
-                QMessageBox.warning(self, "Ошибка", "Не удалось найти книгу или магазин")
-        except Exception as e:
-            QMessageBox.critical(self, "Ошибка", f"Произошла ошибка: {str(e)}")
-
     def show_add_author_dialog(self):
         dialog = QDialog(self)
         dialog.setWindowTitle("Добавить автора")
@@ -518,14 +696,14 @@ class BookStoreApp(QMainWindow):
         
         layout = QVBoxLayout(dialog)
         
-        title = QLabel("# Добавить объект")
-        title.setStyleSheet("font-size: 16px; font-weight: bold;")
-        layout.addWidget(title)
+        title_label = QLabel("# Добавить автора")
+        title_label.setStyleSheet("font-size: 16px; font-weight: bold;")
+        layout.addWidget(title_label)
         
         form = QFormLayout()
         
         name_input = QLineEdit()
-        form.addRow("Название:", name_input)
+        form.addRow("Имя автора:", name_input)
         
         layout.addLayout(form)
         
@@ -541,9 +719,9 @@ class BookStoreApp(QMainWindow):
             QMessageBox.warning(self, "Ошибка", "Введите имя автора")
             return
         
-        if add_author(self.conn, name):
+        if database.add_author(self.conn, name):
             self.authors.append(Author(name))
-            self.update_authors_info()
+            self.update_info_blocks()
             QMessageBox.information(self, "Успех", "Автор успешно добавлен")
             dialog.accept()
         else:
@@ -556,14 +734,14 @@ class BookStoreApp(QMainWindow):
         
         layout = QVBoxLayout(dialog)
         
-        title = QLabel("# Добавить объект")
-        title.setStyleSheet("font-size: 16px; font-weight: bold;")
-        layout.addWidget(title)
+        title_label = QLabel("# Добавить жанр")
+        title_label.setStyleSheet("font-size: 16px; font-weight: bold;")
+        layout.addWidget(title_label)
         
         form = QFormLayout()
         
         name_input = QLineEdit()
-        form.addRow("Название:", name_input)
+        form.addRow("Название жанра:", name_input)
         
         layout.addLayout(form)
         
@@ -579,9 +757,9 @@ class BookStoreApp(QMainWindow):
             QMessageBox.warning(self, "Ошибка", "Введите название жанра")
             return
         
-        if add_genre(self.conn, name):
+        if database.add_genre(self.conn, name):
             self.genres.append(Genre(name))
-            self.update_genres_info()
+            self.update_info_blocks()
             QMessageBox.information(self, "Успех", "Жанр успешно добавлен")
             dialog.accept()
         else:
@@ -594,14 +772,14 @@ class BookStoreApp(QMainWindow):
         
         layout = QVBoxLayout(dialog)
         
-        title = QLabel("# Добавить объект")
-        title.setStyleSheet("font-size: 16px; font-weight: bold;")
-        layout.addWidget(title)
+        title_label = QLabel("# Добавить магазин")
+        title_label.setStyleSheet("font-size: 16px; font-weight: bold;")
+        layout.addWidget(title_label)
         
         form = QFormLayout()
         
         name_input = QLineEdit()
-        form.addRow("Название:", name_input)
+        form.addRow("Название магазина:", name_input)
         
         layout.addLayout(form)
         
@@ -617,9 +795,9 @@ class BookStoreApp(QMainWindow):
             QMessageBox.warning(self, "Ошибка", "Введите название магазина")
             return
         
-        if add_store(self.conn, name):
+        if database.add_store(self.conn, name):
             self.stores.append(Store(name))
-            self.update_stores_info()
+            self.update_info_blocks()
             QMessageBox.information(self, "Успех", "Магазин успешно добавлен")
             dialog.accept()
         else:
@@ -632,14 +810,14 @@ class BookStoreApp(QMainWindow):
         
         layout = QVBoxLayout(dialog)
         
-        title = QLabel("# Добавить объект")
-        title.setStyleSheet("font-size: 16px; font-weight: bold;")
-        layout.addWidget(title)
+        title_label = QLabel("# Добавить покупателя")
+        title_label.setStyleSheet("font-size: 16px; font-weight: bold;")
+        layout.addWidget(title_label)
         
         form = QFormLayout()
         
         name_input = QLineEdit()
-        form.addRow("Название:", name_input)
+        form.addRow("Имя покупателя:", name_input)
         
         layout.addLayout(form)
         
@@ -655,26 +833,33 @@ class BookStoreApp(QMainWindow):
             QMessageBox.warning(self, "Ошибка", "Введите имя покупателя")
             return
         
-        if add_customer(self.conn, name):
+        if database.add_customer(self.conn, name):
             self.customers.append(Customer(name))
-            self.update_customers_info()
+            self.update_info_blocks()
             QMessageBox.information(self, "Успех", "Покупатель успешно добавлен")
             dialog.accept()
         else:
             QMessageBox.warning(self, "Ошибка", "Не удалось добавить покупателя")
 
     def closeEvent(self, event):
+        """Обработчик закрытия окна"""
         self.conn.close()
-        logger.log_info("Приложение закрыто")
         event.accept()
 
 if __name__ == "__main__":
+    # Убедимся, что используем правильный API
+    if hasattr(Qt, 'AA_EnableHighDpiScaling'):
+        QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+    if hasattr(Qt, 'AA_UseHighDpiPixmaps'):
+        QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
+    
+    app = QApplication(sys.argv)
+    os.environ['QT_QPA_PLATFORM_PLUGIN_PATH'] = QLibraryInfo.location(QLibraryInfo.PluginsPath)
+    
     try:
-        app = QApplication(sys.argv)
         window = BookStoreApp()
         window.show()
         sys.exit(app.exec_())
     except Exception as e:
-        logger.log_error(f"Критическая ошибка: {str(e)}")
         QMessageBox.critical(None, "Ошибка", f"Не удалось запустить приложение: {str(e)}")
         sys.exit(1)

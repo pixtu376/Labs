@@ -93,7 +93,7 @@ class Store(Entity):
             self.add_book(book)
             print("Книга с таким названием уже существует в базе данных, но добавлена в библиотеку.")
 
-    def remove_book(self, book_title):
+    def remove_book(self, conn, book_title):
         c = conn.cursor()
         c.execute("DELETE FROM books WHERE title = ?", (book_title,))
         self.library = [b for b in self.library if b.name != book_title]
