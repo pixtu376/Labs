@@ -4,9 +4,9 @@ import sqlite3
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QLineEdit, QComboBox, QListWidget,
-    QDialog, QDialogButtonBox, QFormLayout, QGroupBox, QMessageBox, QFrame
+    QDialog, QDialogButtonBox, QFormLayout, QGroupBox, QMessageBox, QFrame, QListWidgetItem
 )
-from PyQt5.QtGui import QDoubleValidator, QFont
+from PyQt5.QtGui import QDoubleValidator, QFont, QIcon, QPixmap, QColor
 from PyQt5.QtCore import Qt, QLibraryInfo
 
 from classes import Book, Author, Genre, Store, Customer
@@ -30,11 +30,22 @@ class BookStoreApp(QMainWindow):
         self.current_category = None
         self.current_index = 0
         
+        # Создаем зеленую иконку для списка
+        self.green_icon = self.create_green_icon()
+        
         # Настройка интерфейса
         self.setup_ui()
         
         # Показать стартовую страницу (книги)
         self.show_category("books")
+
+    def create_green_icon(self):
+        pixmap = QPixmap(16, 16)
+        pixmap.fill(Qt.transparent)
+        painter = QPixmap(16, 16)
+        pixmap.fill(QColor(0, 128, 0))  # Зеленый цвет
+        icon = QIcon(pixmap)
+        return icon
 
     def load_data(self):
         """Загрузка данных из базы данных"""
@@ -490,7 +501,7 @@ class BookStoreApp(QMainWindow):
                     content.setText(f"Книг: {book_count}\nЖанры: {', '.join(genres) if genres else 'нет'}")
                 elif self.current_category == "genres":
                     book_count = sum(1 for book in self.books if book.genre.name == item.name)
-                    authors = set(book.author.name for book in self.books if book.author.name == item.name)
+                    authors = set(book.author.name for book in self.books if book.genre.name == item.name)
                     title.setText(item.name)
                     title.setAlignment(Qt.AlignCenter)
                     content.setText(f"Книг: {book_count}\nАвторы: {', '.join(authors) if authors else 'нет'}")
@@ -615,11 +626,50 @@ class BookStoreApp(QMainWindow):
         form = QFormLayout()
         
         book_combo = QComboBox()
-        book_combo.addItems([b.name for b in self.books])
+        # Remove icon setting, just add items
+        book_combo.clear()
+        for b in self.books:
+            book_combo.addItem(b.name)
+        # Add custom style sheet for green dropdown arrow
+        book_combo.setStyleSheet("""
+            QComboBox::drop-down {
+                subcontrol-origin: padding;
+                subcontrol-position: top right;
+                width: 20px;
+                border-left-width: 1px;
+                border-left-color: darkgray;
+                border-left-style: solid;
+                border-top-right-radius: 3px;
+                border-bottom-right-radius: 3px;
+            }
+            QComboBox::down-arrow {
+                image: url(icons/green_down_arrow.png);
+                width: 18px;
+                height: 18px;
+            }
+        """)
         form.addRow("Название книги:", book_combo)
         
         store_combo = QComboBox()
         store_combo.addItems([s.name for s in self.stores])
+        # Add same style sheet for green dropdown arrow
+        store_combo.setStyleSheet("""
+            QComboBox::drop-down {
+                subcontrol-origin: padding;
+                subcontrol-position: top right;
+                width: 20px;
+                border-left-width: 1px;
+                border-left-color: darkgray;
+                border-left-style: solid;
+                border-top-right-radius: 3px;
+                border-bottom-right-radius: 3px;
+            }
+            QComboBox::down-arrow {
+                image: url(icons/green_down_arrow.png);
+                width: 18px;
+                height: 18px;
+            }
+        """)
         form.addRow("Название магазина:", store_combo)
         
         layout.addLayout(form)
@@ -668,6 +718,24 @@ class BookStoreApp(QMainWindow):
         
         store_combo = QComboBox()
         store_combo.addItems([s.name for s in self.stores])
+        # Add custom style sheet for green dropdown arrow
+        store_combo.setStyleSheet("""
+            QComboBox::drop-down {
+                subcontrol-origin: padding;
+                subcontrol-position: top right;
+                width: 20px;
+                border-left-width: 1px;
+                border-left-color: darkgray;
+                border-left-style: solid;
+                border-top-right-radius: 3px;
+                border-bottom-right-radius: 3px;
+            }
+            QComboBox::down-arrow {
+                image: url(icons/green_down_arrow.png);
+                width: 18px;
+                height: 18px;
+            }
+        """)
         layout.addWidget(store_combo)
         
         books_list = QListWidget()

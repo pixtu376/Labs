@@ -1,0 +1,146 @@
+2025-04-24 11:52:51,745 - INFO - update_info_blocks called with current_index=0, current_category=books
+2025-04-24 11:52:51,745 - INFO - Items count: 0
+2025-04-24 11:52:51,745 - INFO - Updating block 0 with idx=0
+2025-04-24 11:52:51,745 - INFO - Updating block 1 with idx=1
+2025-04-24 11:52:51,745 - INFO - Updating block 2 with idx=2
+2025-04-24 11:52:51,745 - INFO - Updating side block 0 with idx=3
+2025-04-24 11:52:51,745 - INFO - Updating side block 1 with idx=4
+2025-04-24 11:52:54,176 - INFO - navigate_blocks called with direction=1, block_index=5, current_index=0, current_category=books
+2025-04-24 11:52:54,176 - INFO - Items count: 0 before boundary check, current_index: 1
+2025-04-24 11:52:54,176 - INFO - Adjusted current_index: 0
+2025-04-24 11:52:54,176 - INFO - update_info_blocks called with current_index=0, current_category=books
+2025-04-24 11:52:54,176 - INFO - Items count: 0
+2025-04-24 11:52:54,176 - INFO - Updating block 0 with idx=0
+2025-04-24 11:52:54,176 - INFO - Updating block 1 with idx=1
+2025-04-24 11:52:54,176 - INFO - Updating block 2 with idx=2
+2025-04-24 11:52:54,176 - INFO - Updating side block 0 with idx=3
+2025-04-24 11:52:54,176 - INFO - Updating side block 1 with idx=4
+2025-04-24 11:52:55,260 - INFO - update_info_blocks called with current_index=0, current_category=authors
+2025-04-24 11:52:55,260 - INFO - Items count: 0
+2025-04-24 11:52:55,260 - INFO - Updating block 0 with idx=0
+2025-04-24 11:52:55,260 - INFO - Updating block 1 with idx=1
+2025-04-24 11:52:55,260 - INFO - Updating block 2 with idx=2
+2025-04-24 11:52:55,260 - INFO - Updating side block 0 with idx=3
+2025-04-24 11:52:55,260 - INFO - Updating side block 1 with idx=4
+2025-04-24 11:52:56,745 - INFO - navigate_blocks called with direction=1, block_index=5, current_index=0, current_category=authors
+2025-04-24 11:52:56,745 - INFO - Items count: 0 before boundary check, current_index: 1
+2025-04-24 11:52:56,745 - INFO - Adjusted current_index: 0
+2025-04-24 11:52:56,745 - INFO - update_info_blocks called with current_index=0, current_category=authors
+2025-04-24 11:52:56,745 - INFO - Items count: 0
+2025-04-24 11:52:56,745 - INFO - Updating block 0 with idx=0
+2025-04-24 11:52:56,745 - INFO - Updating block 1 with idx=1
+2025-04-24 11:52:56,745 - INFO - Updating block 2 with idx=2
+2025-04-24 11:52:56,745 - INFO - Updating side block 0 with idx=3
+2025-04-24 11:52:56,745 - INFO - Updating side block 1 with idx=4
+2025-04-24 11:52:59,460 - INFO - update_info_blocks called with current_index=0, current_category=books
+2025-04-24 11:52:59,460 - INFO - Items count: 0
+2025-04-24 11:52:59,460 - INFO - Updating block 0 with idx=0
+2025-04-24 11:52:59,460 - INFO - Updating block 1 with idx=1
+2025-04-24 11:52:59,460 - INFO - Updating block 2 with idx=2
+2025-04-24 11:52:59,460 - INFO - Updating side block 0 with idx=3
+2025-04-24 11:52:59,460 - INFO - Updating side block 1 with idx=4
+2025-04-24 11:53:00,769 - INFO - update_info_blocks called with current_index=0, current_category=authors
+2025-04-24 11:53:00,769 - INFO - Items count: 0
+2025-04-24 11:53:00,769 - INFO - Updating block 0 with idx=0
+2025-04-24 11:53:00,769 - INFO - Updating block 1 with idx=1
+2025-04-24 11:53:00,769 - INFO - Updating block 2 with idx=2
+2025-04-24 11:53:00,769 - INFO - Updating side block 0 with idx=3
+2025-04-24 11:53:00,769 - INFO - Updating side block 1 with idx=4
+2025-04-24 11:53:01,568 - INFO - update_info_blocks called with current_index=0, current_category=genres
+2025-04-24 11:53:01,568 - INFO - Items count: 0
+2025-04-24 11:53:01,568 - INFO - Updating block 0 with idx=0
+2025-04-24 11:53:01,568 - INFO - Updating block 1 with idx=1
+2025-04-24 11:53:01,568 - INFO - Updating block 2 with idx=2
+2025-04-24 11:53:01,568 - INFO - Updating side block 0 with idx=3
+2025-04-24 11:53:01,568 - INFO - Updating side block 1 with idx=4
+2025-04-24 11:53:02,861 - INFO - update_info_blocks called with current_index=0, current_category=stores
+2025-04-24 11:53:02,861 - INFO - Items count: 0
+2025-04-24 11:53:02,861 - INFO - Updating block 0 with idx=0
+2025-04-24 11:53:02,861 - INFO - Updating block 1 with idx=1
+2025-04-24 11:53:02,861 - INFO - Updating block 2 with idx=2
+2025-04-24 11:53:02,861 - INFO - Updating side block 0 with idx=3
+2025-04-24 11:53:02,861 - INFO - Updating side block 1 with idx=4
+2025-04-24 11:57:20,345 - INFO - update_info_blocks called with current_index=0, current_category=books
+2025-04-24 11:57:20,345 - INFO - Items count: 0
+2025-04-24 11:57:20,346 - INFO - Updating block 0 with idx=0
+2025-04-24 11:57:20,346 - INFO - Updating block 1 with idx=1
+2025-04-24 11:57:20,346 - INFO - Updating block 2 with idx=2
+2025-04-24 11:57:20,346 - INFO - Updating side block 0 with idx=3
+2025-04-24 11:57:20,346 - INFO - Updating side block 1 with idx=4
+2025-04-24 11:57:33,319 - INFO - update_info_blocks called with current_index=0, current_category=authors
+2025-04-24 11:57:33,319 - INFO - Items count: 0
+2025-04-24 11:57:33,319 - INFO - Updating block 0 with idx=0
+2025-04-24 11:57:33,319 - INFO - Updating block 1 with idx=1
+2025-04-24 11:57:33,319 - INFO - Updating block 2 with idx=2
+2025-04-24 11:57:33,319 - INFO - Updating side block 0 with idx=3
+2025-04-24 11:57:33,319 - INFO - Updating side block 1 with idx=4
+2025-04-24 11:57:36,812 - INFO - update_info_blocks called with current_index=0, current_category=authors
+2025-04-24 11:57:36,812 - INFO - Items count: 1
+2025-04-24 11:57:36,812 - INFO - Updating block 0 with idx=0
+2025-04-24 11:57:36,812 - INFO - Updating block 1 with idx=1
+2025-04-24 11:57:36,812 - INFO - Updating block 2 with idx=2
+2025-04-24 11:57:36,812 - INFO - Updating side block 0 with idx=3
+2025-04-24 11:57:36,812 - INFO - Updating side block 1 with idx=4
+2025-04-24 11:57:39,590 - INFO - update_info_blocks called with current_index=0, current_category=books
+2025-04-24 11:57:39,590 - INFO - Items count: 0
+2025-04-24 11:57:39,590 - INFO - Updating block 0 with idx=0
+2025-04-24 11:57:39,590 - INFO - Updating block 1 with idx=1
+2025-04-24 11:57:39,590 - INFO - Updating block 2 with idx=2
+2025-04-24 11:57:39,590 - INFO - Updating side block 0 with idx=3
+2025-04-24 11:57:39,590 - INFO - Updating side block 1 with idx=4
+2025-04-24 12:00:41,694 - INFO - update_info_blocks called with current_index=0, current_category=books
+2025-04-24 12:00:41,694 - INFO - Items count: 0
+2025-04-24 12:00:41,694 - INFO - Updating block 0 with idx=0
+2025-04-24 12:00:41,694 - INFO - Updating block 1 with idx=1
+2025-04-24 12:00:41,694 - INFO - Updating block 2 with idx=2
+2025-04-24 12:00:41,694 - INFO - Updating side block 0 with idx=3
+2025-04-24 12:00:41,694 - INFO - Updating side block 1 with idx=4
+2025-04-24 12:00:43,522 - INFO - update_info_blocks called with current_index=0, current_category=books
+2025-04-24 12:00:43,523 - INFO - Items count: 0
+2025-04-24 12:00:43,523 - INFO - Updating block 0 with idx=0
+2025-04-24 12:00:43,523 - INFO - Updating block 1 with idx=1
+2025-04-24 12:00:43,523 - INFO - Updating block 2 with idx=2
+2025-04-24 12:00:43,523 - INFO - Updating side block 0 with idx=3
+2025-04-24 12:00:43,523 - INFO - Updating side block 1 with idx=4
+2025-04-24 12:00:44,017 - INFO - update_info_blocks called with current_index=0, current_category=authors
+2025-04-24 12:00:44,017 - INFO - Items count: 1
+2025-04-24 12:00:44,017 - INFO - Updating block 0 with idx=0
+2025-04-24 12:00:44,017 - INFO - Updating block 1 with idx=1
+2025-04-24 12:00:44,017 - INFO - Updating block 2 with idx=2
+2025-04-24 12:00:44,017 - INFO - Updating side block 0 with idx=3
+2025-04-24 12:00:44,017 - INFO - Updating side block 1 with idx=4
+2025-04-24 12:00:44,602 - INFO - update_info_blocks called with current_index=0, current_category=genres
+2025-04-24 12:00:44,602 - INFO - Items count: 0
+2025-04-24 12:00:44,602 - INFO - Updating block 0 with idx=0
+2025-04-24 12:00:44,602 - INFO - Updating block 1 with idx=1
+2025-04-24 12:00:44,602 - INFO - Updating block 2 with idx=2
+2025-04-24 12:00:44,603 - INFO - Updating side block 0 with idx=3
+2025-04-24 12:00:44,603 - INFO - Updating side block 1 with idx=4
+2025-04-24 12:00:45,722 - INFO - update_info_blocks called with current_index=0, current_category=stores
+2025-04-24 12:00:45,723 - INFO - Items count: 0
+2025-04-24 12:00:45,723 - INFO - Updating block 0 with idx=0
+2025-04-24 12:00:45,723 - INFO - Updating block 1 with idx=1
+2025-04-24 12:00:45,723 - INFO - Updating block 2 with idx=2
+2025-04-24 12:00:45,723 - INFO - Updating side block 0 with idx=3
+2025-04-24 12:00:45,723 - INFO - Updating side block 1 with idx=4
+2025-04-24 12:00:47,289 - INFO - update_info_blocks called with current_index=0, current_category=books
+2025-04-24 12:00:47,289 - INFO - Items count: 0
+2025-04-24 12:00:47,289 - INFO - Updating block 0 with idx=0
+2025-04-24 12:00:47,289 - INFO - Updating block 1 with idx=1
+2025-04-24 12:00:47,290 - INFO - Updating block 2 with idx=2
+2025-04-24 12:00:47,290 - INFO - Updating side block 0 with idx=3
+2025-04-24 12:00:47,290 - INFO - Updating side block 1 with idx=4
+2025-04-24 12:00:48,545 - INFO - update_info_blocks called with current_index=0, current_category=authors
+2025-04-24 12:00:48,545 - INFO - Items count: 1
+2025-04-24 12:00:48,545 - INFO - Updating block 0 with idx=0
+2025-04-24 12:00:48,545 - INFO - Updating block 1 with idx=1
+2025-04-24 12:00:48,545 - INFO - Updating block 2 with idx=2
+2025-04-24 12:00:48,545 - INFO - Updating side block 0 with idx=3
+2025-04-24 12:00:48,545 - INFO - Updating side block 1 with idx=4
+2025-04-24 12:00:51,946 - INFO - update_info_blocks called with current_index=0, current_category=books
+2025-04-24 12:00:51,946 - INFO - Items count: 0
+2025-04-24 12:00:51,946 - INFO - Updating block 0 with idx=0
+2025-04-24 12:00:51,946 - INFO - Updating block 1 with idx=1
+2025-04-24 12:00:51,946 - INFO - Updating block 2 with idx=2
+2025-04-24 12:00:51,946 - INFO - Updating side block 0 with idx=3
+2025-04-24 12:00:51,946 - INFO - Updating side block 1 with idx=4
